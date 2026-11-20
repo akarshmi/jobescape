@@ -60,6 +60,7 @@ type ResumeAnalysis = {
   suggested_search: string | null;
   skills: string[];
   years_experience: number | null;
+  max_experience_years: number | null;
   summary: string;
 };
 type RecentSearch = {
@@ -685,7 +686,7 @@ export default function Home() {
       setResumeAnalysis(analysis);
       if (analysis.suggested_search) setSearchTerm(analysis.suggested_search);
       if (analysis.skills.length) setSkills((current) => Array.from(new Set([...current, ...analysis.skills])));
-      if (analysis.years_experience !== null) setMaxExperience(String(analysis.years_experience));
+      if (analysis.max_experience_years !== null)setMaxExperience(String(analysis.max_experience_years));
       toast.success("Resume analyzed", {
         description: `${analysis.skills.length} skills and a suggested role were added. Review before searching.`,
       });
