@@ -1,0 +1,26 @@
+# Automatic HTTPS for the app and the API.
+{
+	email {$ACME_EMAIL}
+}
+
+# Only these IPs may use the site. The default allows everyone; set ALLOWED_IPS in .env to restrict it.
+(guard) {
+	@denied not remote_ip {$ALLOWED_IPS:0.0.0.0/0 ::/0}
+	handle @denied {
+		respond "Forbidden" 403
+	}
+}
+
+{$APP_DOMAIN} {
+	import guard
+	handle {
+		reverse_proxy frontend:3000
+	}
+}
+
+{$API_DOMAIN} {
+	import guard
+	handle {
+		reverse_proxy backend:8000
+	}
+}

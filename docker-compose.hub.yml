@@ -1,0 +1,40 @@
+# Run JobEscape from prebuilt images (no build step).
+#   docker compose -f docker-compose.hub.yml up -d      then open  http://localhost:3000
+#
+# Images come from Docker Hub: <DOCKERHUB_USER>/jobescape-backend and /jobescape-frontend.
+# They are published by .github/workflows/docker-publish.yml, so this only works once a release exists.
+# The frontend image was built for http://localhost:8000, so use the default ports and open it on this computer.
+name: jobescape
+
+services:
+  backend:
+    image: ${DOCKERHUB_USER:-akarshmi}/jobescape-backend:${TAG:-latest}
+    restart: unless-stopped
+    environment:
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      SCRAPER_PROXIES: ${SCRAPER_PROXIES:-}
+      MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-2}
+      MAX_PARALLEL_TASKS: ${MAX_PARALLEL_TASKS:-12}
+      MAX_TASKS_PER_JOB: ${MAX_TASKS_PER_JOB:-150}
+      JOB_TTL_SECONDS: ${JOB_TTL_SECONDS:-3600}
+    ports:
+      - "127.0.0.1:8000:8000"
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  frontend:
+    image: ${DOCKERHUB_USER:-akarshmi}/jobescape-frontend:${TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

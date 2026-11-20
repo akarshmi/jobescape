@@ -1,0 +1,66 @@
+# JobEscape on your own server with automatic HTTPS (Caddy).
+#   cd cloud/vps && cp .env.example .env   # fill in your domains
+#   docker compose up -d --build
+# Two DNS records must point at the server first: APP_DOMAIN and API_DOMAIN.
+name: jobescape-vps
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in cloud/vps/.env}
+      API_DOMAIN: ${API_DOMAIN:?Set API_DOMAIN in cloud/vps/.env}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in cloud/vps/.env}
+      ALLOWED_IPS: ${ALLOWED_IPS:-0.0.0.0/0 ::/0}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data          # certificates only
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      CORS_ORIGINS: https://${APP_DOMAIN:?Set APP_DOMAIN in cloud/vps/.env}
+      SCRAPER_PROXIES: ${SCRAPER_PROXIES:-}
+      MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-2}
+      MAX_PARALLEL_TASKS: ${MAX_PARALLEL_TASKS:-12}
+      MAX_TASKS_PER_JOB: ${MAX_TASKS_PER_JOB:-150}
+      JOB_TTL_SECONDS: ${JOB_TTL_SECONDS:-3600}
+    expose:
+      - "8000"                     # reachable by Caddy only, not published to the internet
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  frontend:
+    build:
+      context: ../../frontend
+      args:
+        NEXT_PUBLIC_API_URL: https://${API_DOMAIN:?Set API_DOMAIN in cloud/vps/.env}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "3000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  caddy_data:
+  caddy_config:

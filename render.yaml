@@ -1,0 +1,23 @@
+# Render Blueprint: deploys the BACKEND as a free Docker web service.
+# Host the frontend on Vercel (see cloud/README.md). Render needs this file at the repo root.
+services:
+  - type: web
+    name: jobescape-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8000"
+      # The URL of your frontend (for example https://jobescape.vercel.app). Set it in the dashboard.
+      - key: CORS_ORIGINS
+        sync: false
+      # Free instances are small and share IPs: keep searches gentle.
+      - key: MAX_CONCURRENT_JOBS
+        value: "1"
+      - key: MAX_PARALLEL_TASKS
+        value: "4"
+      - key: MAX_TASKS_PER_JOB
+        value: "40"
